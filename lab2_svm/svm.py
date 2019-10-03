@@ -6,6 +6,8 @@ ts = None # target values
 xs = None # input values corresponding to target values
 K = None # precomputed Kernel function
 P = None # precomputed ti tj K[i,j] matx
+non_zero_as, non_zero_xs, non_zero_ts = None, None, None # support vectors
+b = None
 
 def compute_objective_matx(t, x):
     ''' Precomputes P
@@ -13,9 +15,8 @@ def compute_objective_matx(t, x):
     '''
     global P, K
     n = len(t)
-    # TODO speed up by only computing top half of matx above diagonal
     K = np.asarray([[kernel(x[i], x[j]) for j in range(n)] for i in range(n)])
-    P = np.asarray([[t[i] * t[j] * K[i, j] for j in range(n) ] for i in range(n)])
+    P = np.asarray([[t[i] * t[j] * K[i, j] for j in range(n)] for i in range(n)])
 
 def generate_data(plot=False):
     global xs, ts
@@ -79,9 +80,9 @@ def compute_b(s, target_s, alpha):
         alpha =
         t = target classes of x?
     '''
-    # TODO figure out how to remove for loops
-    n = len(alpha)
-    alpha_ts = [alpha[i] * ts[i] for i in range(n)] # compute a_i * t_i vector [a_1 * t_1, a_2 * t_2, ...]
+    global ts
+    alpha = np.array(alpha)
+    alpha_ts = alpha * ts # compute a_i * t_i vector [a_1 * t_1, a_2 * t_2, ...]
     return np.sum(np.dot(alpha_ts, kernel(s, xs).T)) - target_s
 
 def extract_non_zero_alphas(alpha, x):
@@ -96,11 +97,14 @@ def indicator_function(s, target_s, alpha):
     ''' computes sum over non-zero values
         s = new datapoint to be classified
     '''
-    b = compute_b(s, target_s, alpha)
-    non_zero_as, non_zero_xs, non_zero_ts = extract_non_zero_alphas(alpha, xs)
-    n = len(non_zero_as)
-    alpha_ts = [non_zero_as[i] * non_zero_ts[i] for i in range(n)]
+    alpha_ts = non_zero_as * non_zero_as
     return np.sum(np.dot(alpha_ts, kernel(s, non_zero_xs).T)) - b
+
+def svm_classifier():
+    global non_zero_as, non_zero_xs, non_zero_ts, b
+    # TODO
+    # b = compute_b(s, target_s, alpha)
+    # non_zero_as, non_zero_xs, non_zero_ts = extract_non_zero_alphas(alpha, xs)
 
 if __name__ == '__main__':
     generate_data()
