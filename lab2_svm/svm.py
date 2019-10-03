@@ -4,6 +4,7 @@ import matplotlib . pyplot as plt
 
 ts = None # target values
 xs = None # input values corresponding to target values
+N = None # size of training data
 K = None # precomputed Kernel function
 P = None # precomputed ti tj K[i,j] matx
 non_zero_as, non_zero_xs, non_zero_ts = None, None, None # support vectors
@@ -34,6 +35,7 @@ def generate_data(plot=False):
     inputs = inputs[permute, :]
     targets = targets[permute]
     xs = inputs
+    N = len(xs)
     ts = targets
 
 def plot_data(classA, classB):
@@ -105,6 +107,10 @@ def svm_classifier():
     # TODO
     # b = compute_b(s, target_s, alpha)
     # non_zero_as, non_zero_xs, non_zero_ts = extract_non_zero_alphas(alpha, xs)
+    generate_data()
+    C = 0.1 # TODO change value. Lower = rely more on slack = better for noisier datasets
+    ret = minimize(objective,  np.zeros(N), bounds=[(0, C) for x in xs], constraints=zerofun)
+    alpha = ret['x']
 
 if __name__ == '__main__':
     generate_data()
