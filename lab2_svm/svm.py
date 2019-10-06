@@ -171,12 +171,15 @@ def svm_classifier(cluster_size, cluster_centers, cluster_centers_i, C=None, plo
 
 if __name__ == '__main__':
     # kernels = ['linear', 'polynomial', 'rbf']
-    kernels = ['linear', 'polynomial']
-    kernel_parameters = {'polynomial': [2, 3, 4, 5], 'rbf': [0.1, 0.15]}
-    cluster_centers = [[[-1.5, 0.5], [1.5, 0.5], [0.0, -0.5]], [[1.0, 1.0], [4.0, 2.0], [2.0, -2.0]], [[0.0, 3.5], [0.5, -1.0], [0.5, 1.5]]]
-    cluster_sizes = [20, 30, 40]
+    kernels = ['polynomial']
+    kernel_parameters = {'polynomial': [3, 5], 'rbf': [0.01]}
+    # cluster_centers = [[[-1.5, 0.5], [1.5, 0.5], [0.0, -0.5]], [[1.0, 1.0], [4.0, 2.0], [2.0, -2.0]], [[0.0, 3.5], [0.5, -1.0], [0.5, 1.5]]]
+    cluster_centers = [[[-1.5, 0.5], [1.5, 0.5], [0.0, -0.5]]]
+    cluster_sizes = [20, 30]
+    C = 1000
 
     # kernel_type, kernel_p, kernel_sigma
+    # slack: all (cluster-size 30), rbf: sigma-0.15, poly: p-5/3, cluster-center-1
 
     for i, cluster_size in enumerate(cluster_sizes):
         for j, cluster_center in enumerate(cluster_centers):
@@ -184,7 +187,7 @@ if __name__ == '__main__':
                 kernel_type = used_kernel
                 plot_name = used_kernel + '_cluster-size-' + str(i) + '_cluster-center-' + str(j)
                 if 'linear' == used_kernel:
-                    svm_classifier(cluster_size, cluster_center, j)
+                    svm_classifier(cluster_size, cluster_center, j, C)
                 else:  # non-linear kernels, therefore we need to take the parameters into account as well
                     params = kernel_parameters.get(used_kernel)
                     for parameter in params:
@@ -192,4 +195,4 @@ if __name__ == '__main__':
                             kernel_sigma = parameter
                         else:
                             kernel_p = parameter
-                        svm_classifier(cluster_size, cluster_center, j)
+                        svm_classifier(cluster_size, cluster_center, j, C)
