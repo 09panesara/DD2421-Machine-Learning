@@ -27,11 +27,18 @@ def compute_objective_matx(t, x):
 
 def generate_data(cluster_size, cluster_centers):
     global xs, ts, classA, classB, N
-    np.random.seed(100) # generate same data each time
+    np.random.seed(50) # generate same data each time
     classA_size = int(cluster_size/2)
     classA = np.concatenate((np.random.randn(classA_size, 2) * 0.2 + cluster_centers[0], np.random.randn(classA_size, 2) * 0.2 + cluster_centers[1]))
     classB = np.random.randn(cluster_size, 2) * 0.2 + cluster_centers[2]
+    print('adding random gaussian noise')
+    classA +=np.array([np.random.normal(0, 0.2, len(classA)), np.random.normal(0, 0.35, len(classA))]).T
+    classB += np.array([np.random.normal(0, 0.35, len(classB)), np.random.normal(0, 0.45, len(classB))]).T
     inputs = np.concatenate((classA, classB))
+    # add noise
+    print(classA.shape)
+    print(classB.shape)
+
     targets = np.concatenate((np.ones(classA.shape[0]), -np.ones(classB.shape[0])))
     N = inputs.shape[0]  # Number of rows (samples)
     # randomly reorder samples
@@ -44,7 +51,7 @@ def generate_data(cluster_size, cluster_centers):
     ts = targets
     compute_objective_matx(ts, xs)
 
-def plot_data(classA, classB, cluster_center_i, cluster_size):
+def plot_data(classA, classB, cluster_center_i, cluster_size, C):
     plt.plot([p[0] for p in classA], [p[1] for p in classA], 'b.')
     plt.plot([p[0] for p in classB], [p[1] for p in classB], 'r.')
     plt.axis('equal')  # Force same scale on both axes plt.savefig(’svmplot.pdf’) # Save a copy in a file plt .show() # Show the plot on the screen
@@ -52,10 +59,19 @@ def plot_data(classA, classB, cluster_center_i, cluster_size):
     # plot decision boundary
     xgrid = np.linspace(-5, 5)
     ygrid = np.linspace(-4, 4)
+    # add noise
+    # print('adding random gaussian noise')
+    # xgrid += np.random.normal(0, 0.01, len(xgrid))
+    # ygrid += np.random.normal(0, 0.01, len(ygrid))
+
+
     grid = np.array([[indicator_function([x,y]) for x in xgrid] for y in ygrid])
     plt.contour(xgrid, ygrid, grid, (-1.0, 0.0, 1.0), colors=('red', 'black', 'blue'), linewidths=(1, 3, 1))
     title = f'SVM Classifer with {kernel_type} kernel'
     plot_name = f'kernel={kernel_type}'
+    if C is not None:
+        plot_name += f'_slack={C}'
+        title += f', slack={C}'
     if kernel_type == 'rbf':
         plot_name += f'_sigma={kernel_sigma}'
         title += f' with sigma = {kernel_sigma}'
@@ -63,9 +79,6 @@ def plot_data(classA, classB, cluster_center_i, cluster_size):
         title += f' with p = {kernel_p}'
         plot_name += f'_p={kernel_p}'
 
-    if slack is not None:
-        title += f' with slack {slack}'
-        plot_name += f'_slack={slack}'
     plot_name += f'_cluster-center={cluster_center_i}_cluster-size={cluster_size}.png'
     plt.title(title)
     print('Saving plot to', plot_name)
@@ -114,7 +127,6 @@ def zerofun(alphas):
     return np.sum(np.dot(alphas, ts))
 
 def compute_b(alpha, t, x):
-    # DOES AS EXPECTED GIVEN PARAMETERS
     ''' computes threshold value b
         s = support vector
         x = set of points
@@ -132,7 +144,6 @@ def compute_b(alpha, t, x):
     return b
 
 def extract_non_zero_alphas(alphas):
-    # DOES AS EXPECTED
     ''' extract alpha values which are non-zero and returns the corresponding alphas, data points and target values '''
     non_zero_indices = [i for i, a in enumerate(alphas) if a > 10**-5]
     a_s = alphas[non_zero_indices]
@@ -141,7 +152,6 @@ def extract_non_zero_alphas(alphas):
     return a_s, x_s, t_s
 
 def indicator_function(s):
-    # DOES AS EXPECTED given parameter
     ''' computes sum over non-zero values
         s = new datapoint to be classified
     '''
@@ -152,8 +162,19 @@ def indicator_function(s):
 
 def svm_classifier(cluster_size, cluster_centers, cluster_centers_i, C=None, plot_name='svmplot-test.pdf', plot=True):
     global non_zero_as, non_zero_xs, non_zero_ts, b
-    # TODO
     generate_data(cluster_size, cluster_centers)
+    print('slack', C)
+    plt.plot([p[0] for p in classA], [p[1] for p in classA], 'b.')
+    plt.plot([p[0] for p in classB], [p[1] for p in classB], 'r.')
+    plt.axis(
+        'equal')  # Force same scale on both axes plt.savefig(’svmplot.pdf’) # Save a copy in a file plt .show() # Show the plot on the screen
+
+    # plot decision boundary
+    print("Let's see the distribution of data")
+    # xgrid = np.linspace(-5, 5)
+    # ygrid = np.linspace(-4, 4)
+    # plt.plot(xgrid, ygrid)
+    # plt.show()
     constraint = {'type': 'eq', 'fun': zerofun}
     ret = minimize(objective,  np.zeros(N), bounds=[(0, C) for x in xs], constraints=constraint)
     if ret['success']: # we minimised the objective function
@@ -163,7 +184,7 @@ def svm_classifier(cluster_size, cluster_centers, cluster_centers_i, C=None, plo
         if len(non_zero_xs) > 0:
             b = compute_b(non_zero_as, non_zero_ts, non_zero_xs)
             if plot:
-                plot_data(classA, classB, cluster_centers_i, cluster_size)
+                plot_data(classA, classB, cluster_centers_i, cluster_size, C)
         else:
             print('no non-zero alphas found for ', plot_name)
     else:
@@ -171,13 +192,12 @@ def svm_classifier(cluster_size, cluster_centers, cluster_centers_i, C=None, plo
 
 if __name__ == '__main__':
     # kernels = ['linear', 'polynomial', 'rbf']
-    kernels = ['polynomial']
-    kernel_parameters = {'polynomial': [3, 5], 'rbf': [0.01]}
+    kernels = ['rbf']
+    kernel_parameters = {'polynomial': [3], 'rbf': [0.01]}
     # cluster_centers = [[[-1.5, 0.5], [1.5, 0.5], [0.0, -0.5]], [[1.0, 1.0], [4.0, 2.0], [2.0, -2.0]], [[0.0, 3.5], [0.5, -1.0], [0.5, 1.5]]]
-    cluster_centers = [[[-1.5, 0.5], [1.5, 0.5], [0.0, -0.5]]]
-    cluster_sizes = [20, 30]
-    C = 1000
-
+    cluster_centers = [[[-1.5, 0.5], [0.5, 0.5], [0.0, -0.5]]]
+    cluster_sizes = [20]
+    C = None
     # kernel_type, kernel_p, kernel_sigma
     # slack: all (cluster-size 30), rbf: sigma-0.15, poly: p-5/3, cluster-center-1
 
@@ -188,7 +208,7 @@ if __name__ == '__main__':
                 plot_name = used_kernel + '_cluster-size-' + str(i) + '_cluster-center-' + str(j)
                 if 'linear' == used_kernel:
                     svm_classifier(cluster_size, cluster_center, j, C)
-                else:  # non-linear kernels, therefore we need to take the parameters into account as well
+                else:  # pass in parameters
                     params = kernel_parameters.get(used_kernel)
                     for parameter in params:
                         if used_kernel == 'rbf':
@@ -196,3 +216,4 @@ if __name__ == '__main__':
                         else:
                             kernel_p = parameter
                         svm_classifier(cluster_size, cluster_center, j, C)
+
